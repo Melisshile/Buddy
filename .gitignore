@@ -1,0 +1,36 @@
+# Buddy
+node_modules/
+dist/
+lib/
+.firebase/
+*.log
+.DS_Store
+*.local
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example
+functions/.env
+functions/.env.*
+
+# Firebase / Google credentials
+**/serviceAccount*.json
+**/firebase-adminsdk*.json
+**/*credentials*.json
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Debug / tooling
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.vscode/*
+!.vscode/extensions.json
+
+# OS / IDE
+Thumbs.db
+.idea/

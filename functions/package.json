@@ -1,0 +1,23 @@
+{
+  "name": "functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Buddy Cloud Functions",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions --project buddy-46cbb",
+    "deploy": "firebase deploy --only functions --project buddy-46cbb"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.2"
+  }
+}

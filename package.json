@@ -1,0 +1,22 @@
+{
+  "name": "buddy",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @buddy/web",
+    "build": "npm run build -w @buddy/shared && npm run build -w @buddy/web",
+    "build:shared": "npm run build -w @buddy/shared",
+    "build:functions": "npm --prefix functions run build",
+    "lint": "npm run lint -w @buddy/web",
+    "preview": "npm run preview -w @buddy/web",
+    "deploy": "npm run build && firebase deploy --project buddy-46cbb",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting --project buddy-46cbb"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
