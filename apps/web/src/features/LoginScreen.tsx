@@ -47,12 +47,15 @@ export function LoginScreen() {
           </button>
         </div>
         {error && <p className="mt-6 text-sm text-buddy-warn">{error}</p>}
-        {isFirebaseConfigured && (
-          <p className="mt-8 text-sm text-buddy-mist/50">
-            Enable Google + Anonymous auth, Firestore, and Firebase AI Logic (Gemini) in project{' '}
-            <span className="text-buddy-glow">buddy-46cbb</span>.
-          </p>
-        )}
+        <p className="mt-8 text-sm text-buddy-mist/50">
+          Powered by OpenAI · GPT-5.6 · Codex · Responses API
+          {isFirebaseConfigured ? (
+            <>
+              {' '}
+              · Firebase project <span className="text-buddy-glow">buddy-46cbb</span>
+            </>
+          ) : null}
+        </p>
       </div>
     </div>
   );

@@ -1,74 +1,165 @@
-# Buddy
+# Buddy AI 2.0
 
-Voice-first AI companion for becoming an AI Engineer.
+**The AI Career Operating System** that helps students and professionals learn, build projects, and grow through intelligent voice interaction, persistent memory, and specialized AI agents.
 
-## Stack (v1)
+> OpenAI Build Week entry · Powered by **GPT-5.6**, **Codex**, **Responses API**, Structured Outputs, and tool calling.
 
-- **Frontend:** React + Vite + TypeScript + Tailwind + PWA
-- **Backend:** Firebase (Auth, Firestore, Storage, Functions, Hosting, App Check)
-- **AI:** AI Gateway → Gemini adapter (Firebase AI Logic) or mock adapter
-- **Offline:** IndexedDB local-first reads + Firestore sync
-- **Voice:** Web Speech API behind Voice Engine interfaces
+---
 
-## Monorepo
+## Demo story (90 seconds)
+
+1. **Dashboard** — “Good morning” + goal *Win OpenAI Build Week* + project progress + Career Digital Twin.
+2. Say / click: **“Build me a Firebase inventory app.”**
+3. Watch the **agent chain**: Career → Project Manager → Coding (Codex) → Research → Reviewer.
+4. Twin updates — new project, tasks, skill progress.
+5. Say: **“Continue my AI project.”** — Buddy resumes without re-asking context.
+
+Hosted: https://buddy-46cbb.web.app
+
+---
+
+## Architecture
 
 ```
-apps/web          React PWA
-packages/shared   Types + AI / memory / voice interfaces
-functions         Cloud Functions
+Voice / Text
+    ↓
+OpenAI (Responses API · GPT-5.6 / Codex)
+    ↓
+Agent Orchestrator
+    ↓
+Career · PM · Coding · Research · Learning · Document · Reviewer
+    ↓
+Shared Memory (Career Digital Twin + IndexedDB)
+    ↓
+Tools (skills, projects, tasks, preferences)
+    ↓
+Firebase (Auth · Firestore · Functions proxy · Hosting)
+    ↓
+UI (Dashboard + Voice Session)
 ```
 
-## Quick start (demo, no Firebase)
+```
+Specialized Agents
+        ↓
+  Shared Memory
+        ↓
+     OpenAI
+        ↓
+    Firebase
+```
+
+---
+
+## OpenAI capabilities (Build Week)
+
+| Capability | How Buddy uses it |
+|------------|-------------------|
+| **GPT-5.6** | Default orchestration & career reasoning |
+| **Codex (`gpt-5.2-codex`)** | Coding Agent implementation plans |
+| **Responses API** | Primary generation path (`/v1/responses`) |
+| **Structured Outputs** | Per-agent summary JSON for the demo UI |
+| **Function / tool calling** | Update Digital Twin (skills, projects, tasks, prefs) |
+| **Streaming** | Roadmapped (next demo polish) |
+| **Vision** | Roadmapped for diagram uploads |
+
+Gemini is **not** the default. Offline/demo falls back to a local coach only when OpenAI is unavailable.
+
+---
+
+## Features
+
+- **Demo-first Dashboard** — purpose visible before any chat
+- **Multi-agent orchestration** — coordinate, don’t just answer
+- **Career Digital Twin** — skills, projects, goals, strengths, gaps
+- **Voice → Agent → Tool → Result**
+- **Local-first memory** (IndexedDB) + Firebase sync for profile/goals/skills/memories
+- **PWA** installable shell
+
+---
+
+## Quick start
 
 ```bash
 npm install
 npm run build:shared
 cp .env.example apps/web/.env
-# leave Firebase keys empty; VITE_USE_AI_MOCK=true
+```
+
+### Configure OpenAI (required for live demo)
+
+**Option A — Functions proxy (recommended)**
+
+```bash
+# In Google Cloud / Firebase, set OPENAI_API_KEY for functions
+npm --prefix functions install
+npm run build:functions
+firebase deploy --only functions --project buddy-46cbb
+```
+
+Set in `apps/web/.env`:
+
+```env
+VITE_OPENAI_PROXY_URL=https://us-central1-buddy-46cbb.cloudfunctions.net/buddyOpenAI
+VITE_USE_AI_MOCK=false
+```
+
+**Option B — Local key (dev only, never commit)**
+
+```env
+VITE_OPENAI_API_KEY=sk-...
+VITE_USE_AI_MOCK=false
+```
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:5173 → **Enter demo mode**.
+Open http://localhost:5173 → enter demo / sign in → **Dashboard**.
 
-## Firebase setup
+---
 
-1. Create a Firebase project; enable Auth (Google + Anonymous), Firestore, Storage, Hosting.
-2. Enable **Firebase AI Logic** / Gemini for the web app.
-3. Copy web config into `apps/web/.env` from `.env.example`.
-4. Set `VITE_USE_AI_MOCK=false` when ready for live Gemini.
-5. Deploy rules & hosting:
+## Tech stack
+
+| Layer | Stack |
+|-------|--------|
+| Frontend | React 18 · Vite 6 · TypeScript · Tailwind · PWA |
+| AI | OpenAI Responses API · GPT-5.6 · Codex |
+| Agents | In-app orchestrator + strict tool schemas |
+| Data | IndexedDB (idb) · Firestore |
+| Backend | Firebase Auth · Functions (`buddyOpenAI`) · Hosting |
+| Monorepo | `apps/web` · `packages/shared` · `functions` |
+
+---
+
+## Monorepo
+
+```
+apps/web          React PWA (Dashboard, Voice, Agents, Twin)
+packages/shared   Types · AI interfaces · voice · memory
+functions         buddyOpenAI proxy · health · Auth seed
+docs/             CHARTER · TASKS · DevelopmentReport
+```
+
+---
+
+## Vision
+
+Buddy is not a chat window. It is a **Career Operating System**:
+
+- Agents that **coordinate** work
+- A **Digital Twin** that remembers who you are becoming
+- Voice that **continues projects**, not just transcripts text
+- OpenAI as the intelligence layer judges expect to see
+
+See `docs/CHARTER.md` and `docs/TASKS.md` for Build Week priorities.
+
+---
+
+## Deploy
 
 ```bash
 npm run build
-firebase deploy
+firebase deploy --only hosting,functions --project buddy-46cbb
 ```
 
-Optional App Check: set `VITE_RECAPTCHA_SITE_KEY`.
-
-## Architecture rules
-
-1. UI never calls model providers directly — only via **AI Gateway**.
-2. Buddy **reads IndexedDB first**; Firebase syncs.
-3. Voice modules are swappable (Web Speech now; whisper.cpp / Piper later).
-
-## Companion commands
-
-- “What should I work on today?”
-- “Teach me embeddings”
-- “Quiz me on RAG”
-- “Remember that I prefer TypeScript”
-- “Summarize what I learned this week”
-
-## Deploy (project: buddy-46cbb)
-
-```bash
-npm run build
-firebase deploy --only firestore,hosting --project buddy-46cbb
-```
-
-- **Hosting:** https://buddy-46cbb.web.app
-- **Cloud Functions** need the Blaze plan: upgrade at https://console.firebase.google.com/project/buddy-46cbb/usage/details then `firebase deploy --only functions --project buddy-46cbb`
-- **Storage:** enable in console first, then `firebase deploy --only storage --project buddy-46cbb`
-
-Functions are **not** in the npm workspaces (Firebase needs its own `functions/node_modules`).
-
+Set `OPENAI_API_KEY` on Cloud Functions before demo day.

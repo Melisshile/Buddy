@@ -6,9 +6,11 @@ import {
   type Persona,
   type VoiceIntent,
 } from '@buddy/shared';
+import { runAgentOrchestra } from '../agents/orchestrator';
 import { generateViaGateway, getLastAiError } from '../ai/gateway';
 import { listGoals, listMemories, listMessages, listSkills, putConversation, putMessage } from '../sync/localDb';
 import { pushMemory } from '../sync/syncEngine';
+import { ensureTwin, putTwin } from '../sync/twinDb';
 
 function weekAgo() {
   return Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -60,7 +62,7 @@ export function intentSystemAddon(intent: VoiceIntent, transcript: string): stri
     case 'summarize_week':
       return 'Summarize learning from the week context and memories. Suggest one next milestone.';
     default:
-      return 'Respond as Buddy, the AI engineering companion.';
+      return 'Respond as Buddy, the AI Career Operating System.';
   }
 }
 
@@ -97,47 +99,50 @@ export async function generateBuddyReply(opts: {
   intent: VoiceIntent;
   persona: Persona;
   history?: { role: 'user' | 'assistant'; content: string }[];
-}): Promise<string> {
+  displayName?: string | null;
+}): Promise<{ content: string; agentSteps?: { agent: string; summary: string; model?: string }[] }> {
   const { userId, conversationId, transcript, intent, persona } = opts;
 
   if (intent === 'remember') {
     await extractAndStoreMemory(userId, transcript);
   }
 
-  const context = await buildContextBlock(userId, transcript);
-  let weekExtra = '';
-  if (intent === 'summarize_week') {
-    weekExtra = `\n\n## Local weekly notes\n${await summarizeWeekLocal(userId)}`;
+  const twin = await ensureTwin(userId, opts.displayName);
+  const orchestrated = await runAgentOrchestra({
+    utterance: transcript,
+    twin,
+    history: opts.history,
+  });
+
+  if (orchestrated.twinPatch) {
+    await putTwin({ ...twin, ...orchestrated.twinPatch, userId, updatedAt: Date.now() });
   }
 
-  const system = [
-    BUDDY_SYSTEM_PROMPT,
-    PERSONA_PROMPTS[persona] ?? PERSONA_PROMPTS.teacher,
-    intentSystemAddon(intent, transcript),
-    context + weekExtra,
-  ].join('\n\n');
+  let content = orchestrated.reply;
 
-  const history = opts.history ?? [];
-
-  let content: string;
-  try {
-    const result = await generateViaGateway({
-      system,
-      messages: [
-        ...history.map((h) => ({ role: h.role, content: h.content })),
-        { role: 'user', content: transcript },
-      ],
-    });
-    content = result.content;
-    const aiErr = getLastAiError();
-    if (aiErr && !content.includes('Live Gemini failed')) {
-      // already annotated by generateViaGateway when falling back
-      void aiErr;
+  // Lightweight intent overlays when orchestra returned a thin coach reply
+  if (intent === 'summarize_week' && orchestrated.provider === 'coach') {
+    const context = await buildContextBlock(userId, transcript);
+    const weekExtra = await summarizeWeekLocal(userId);
+    const system = [
+      BUDDY_SYSTEM_PROMPT,
+      PERSONA_PROMPTS[persona] ?? PERSONA_PROMPTS.teacher,
+      intentSystemAddon(intent, transcript),
+      context,
+      `## Local weekly notes\n${weekExtra}`,
+    ].join('\n\n');
+    try {
+      const result = await generateViaGateway({
+        system,
+        messages: [{ role: 'user', content: transcript }],
+      });
+      content = result.content;
+    } catch {
+      /* keep orchestra reply */
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'AI failed';
-    content = `I hit an error generating a reply: ${message}\n\nTry again, or check Firebase AI Logic is enabled for project buddy-46cbb.`;
   }
+
+  void getLastAiError();
 
   const userMsg: ChatMessage = {
     id: crypto.randomUUID(),
@@ -152,6 +157,7 @@ export async function generateBuddyReply(opts: {
     role: 'assistant',
     content,
     createdAt: Date.now() + 1,
+    meta: { steps: orchestrated.steps, model: orchestrated.model, provider: orchestrated.provider },
   };
   await putMessage(userMsg);
   await putMessage(assistantMsg);
@@ -168,7 +174,7 @@ export async function generateBuddyReply(opts: {
     });
   }
 
-  return content;
+  return { content, agentSteps: orchestrated.steps };
 }
 
 export async function ensureConversation(userId: string, persona: Persona) {

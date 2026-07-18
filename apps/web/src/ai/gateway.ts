@@ -1,13 +1,13 @@
 import {
   createAIGateway,
+  OPENAI_MODELS,
   type AIGateway,
   type AIProviderAdapter,
   type GenerateRequest,
   type GenerateResponse,
 } from '@buddy/shared';
-import { getFirebaseApp, isFirebaseConfigured } from '../lib/firebase';
-
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'] as const;
+import { getFirebaseAuth, isFirebaseConfigured } from '../lib/firebase';
+import { callOpenAIResponses } from './openaiClient';
 
 function lastUserText(request: GenerateRequest): string {
   return [...request.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
@@ -15,81 +15,40 @@ function lastUserText(request: GenerateRequest): string {
 
 function buildCoachingReply(q: string): string {
   const lower = q.toLowerCase();
-
+  if (/build|inventory|firebase app|create (an? )?app/.test(lower)) {
+    return [
+      '## Agent plan (offline coach)',
+      '',
+      '1. **Career Agent** — Aligns this build with your AI Engineer goal',
+      '2. **Project Manager** — Breaks work into Firebase Auth → Firestore inventory → Hosting',
+      '3. **Coding Agent** — TypeScript + Firebase modular SDK scaffold',
+      '4. **Research Agent** — Security rules + App Check checklist',
+      '5. **Reviewer** — Demo readiness for OpenAI Build Week',
+      '',
+      '_Live OpenAI is offline or not configured — configure `OPENAI_API_KEY` / proxy to run GPT-5.6 + Codex._',
+    ].join('\n');
+  }
   if (/what should i|today|work on|plan my/.test(lower)) {
     return [
-      'Here is a focused plan for today:',
+      'Focused plan for today:',
+      '1. Continue your active project (25 min)',
+      '2. One Learning Agent lesson on agents/tool calling (20 min)',
+      '3. Update your Career Twin strengths/gaps (10 min)',
       '',
-      '1. **20 min** — Embeddings: what they are + why RAG needs them',
-      '2. **25 min** — Tiny TypeScript demo: embed 3 sentences and compare cosine similarity',
-      '3. **10 min** — Write 3 quiz questions for yourself',
-      '',
-      'Say **“Teach me embeddings”** to start the lesson, or **“Quiz me on RAG”** when you are ready.',
+      'Say **“Continue my AI project”** or **“Build me a Firebase inventory app.”**',
     ].join('\n');
   }
-
-  if (/teach me|explain|lesson/.test(lower)) {
-    const topic = q.replace(/^(please\s+)?(teach me|explain|lesson on)\s+/i, '').trim() || 'this topic';
-    return [
-      `## Lesson: ${topic}`,
-      '',
-      '**Idea:** In AI systems, you turn messy input (text, code, docs) into something a model can reason over and retrieve.',
-      '',
-      '**Why it matters for Buddy:** better memory, better research, and better answers with citations.',
-      '',
-      '**3 steps**',
-      '1. Define the concept in one sentence',
-      '2. Name one failure mode if you skip it',
-      '3. Point to where it belongs in Buddy’s architecture',
-      '',
-      '**Exercise:** In your own words, write one sentence defining it, then one sentence on how Buddy would use it.',
-      '',
-      'Reply with your answer and I will grade it. Or say **“make it easier”** / **“give me TypeScript”**.',
-    ].join('\n');
-  }
-
-  if (/quiz me|test me|flashcard/.test(lower)) {
-    return [
-      '## Quick quiz',
-      '',
-      '1) What is an embedding?',
-      '2) Why does RAG need a vector store?',
-      '3) Name one way to evaluate retrieval quality.',
-      '',
-      'Answer in your own words. I will give feedback and a next lesson.',
-    ].join('\n');
-  }
-
   if (/remember/.test(lower)) {
-    return 'Saved. I will treat that as a long-term preference for future coaching.';
+    return 'Saved to your Career Digital Twin preferences.';
   }
-
-  if (/summarize|learned this week|this week/.test(lower)) {
-    return [
-      '## This week (coaching summary)',
-      '',
-      '- You are building Buddy as an AI-engineering learning companion',
-      '- Core stack: Firebase + AI Gateway + voice-first UX + local-first memory',
-      '- Next milestone: make sync + skill progression real, then RAG',
-      '',
-      'Want a quiz on embeddings, or a short architecture review of Buddy?',
-    ].join('\n');
-  }
-
   return [
     `I hear you: “${q}”`,
     '',
-    'I am Buddy — your AI engineering coach. I can:',
-    '- Plan your day (“What should I work on today?”)',
-    '- Teach a topic (“Teach me embeddings”)',
-    '- Quiz you (“Quiz me on RAG”)',
-    '- Remember preferences (“Remember that I prefer TypeScript”)',
-    '',
-    'Ask me one of those, or tell me what you are stuck on in AI engineering.',
+    'I am Buddy — your AI Career Operating System. I coordinate specialized agents powered by OpenAI.',
+    'Try: “Build me a Firebase inventory app.” or “Continue my AI project.”',
   ].join('\n');
 }
 
-/** Local coaching adapter — always available; used as primary fallback */
 export function createMockAdapter(): AIProviderAdapter {
   return {
     name: 'coach',
@@ -97,67 +56,53 @@ export function createMockAdapter(): AIProviderAdapter {
       return {
         content: buildCoachingReply(lastUserText(request)),
         provider: 'coach',
-        model: 'buddy-coach-v1',
+        model: 'buddy-coach-v2',
       };
     },
   };
 }
 
-async function callGeminiModel(
-  modelName: string,
-  request: GenerateRequest,
-): Promise<GenerateResponse> {
-  const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
-  const ai = getAI(getFirebaseApp(), { backend: new GoogleAIBackend() });
-  const system = request.system ?? '';
-  const model = getGenerativeModel(ai, {
-    model: modelName,
-    ...(system ? { systemInstruction: system } : {}),
-  });
-
-  const history = request.messages.filter((m) => m.role !== 'system');
-  const prior = history.slice(0, -1).map((m) => ({
-    role: m.role === 'assistant' ? ('model' as const) : ('user' as const),
-    parts: [{ text: m.content }],
-  }));
-  const latest = history[history.length - 1]?.content ?? 'Hello';
-
-  // Gemini requires history to start with a user turn when present
-  const safeHistory =
-    prior.length > 0 && prior[0].role === 'model'
-      ? [{ role: 'user' as const, parts: [{ text: '(continued)' }] }, ...prior]
-      : prior;
-
-  if (safeHistory.length === 0) {
-    const result = await model.generateContent(latest);
-    const content = result.response.text();
-    if (!content?.trim()) throw new Error('Empty response from Gemini');
-    return { content, provider: 'gemini', model: modelName };
-  }
-
-  const chat = model.startChat({ history: safeHistory });
-  const result = await chat.sendMessage(latest);
-  const content = result.response.text();
-  if (!content?.trim()) throw new Error('Empty response from Gemini');
-  return { content, provider: 'gemini', model: modelName };
+function resolveOpenAIOpts() {
+  const proxyUrl = import.meta.env.VITE_OPENAI_PROXY_URL?.trim() || '';
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY?.trim() || '';
+  return { proxyUrl, apiKey };
 }
 
-export function createGeminiAdapter(): AIProviderAdapter {
+export function isOpenAIConfigured(): boolean {
+  const { proxyUrl, apiKey } = resolveOpenAIOpts();
+  return Boolean(proxyUrl || apiKey);
+}
+
+export function createOpenAIAdapter(): AIProviderAdapter {
   return {
-    name: 'gemini',
+    name: 'openai',
     async generateResponse(request: GenerateRequest): Promise<GenerateResponse> {
-      let lastError: unknown;
-      for (const modelName of GEMINI_MODELS) {
+      const { proxyUrl, apiKey } = resolveOpenAIOpts();
+      let idToken: string | null = null;
+      if (proxyUrl && isFirebaseConfigured) {
         try {
-          return await callGeminiModel(modelName, request);
-        } catch (err) {
-          lastError = err;
-          console.warn(`[Buddy AI] Gemini model ${modelName} failed:`, err);
+          idToken = (await getFirebaseAuth().currentUser?.getIdToken()) ?? null;
+        } catch {
+          idToken = null;
         }
       }
-      const message =
-        lastError instanceof Error ? lastError.message : 'Gemini request failed';
-      throw new Error(message);
+      return callOpenAIResponses(
+        {
+          ...request,
+          model: request.model ?? OPENAI_MODELS.flagship,
+        },
+        { proxyUrl: proxyUrl || undefined, apiKey: apiKey || undefined, idToken },
+      );
+    },
+  };
+}
+
+/** @deprecated Gemini path kept for emergency fallback only — not used in Build Week default. */
+export function createGeminiAdapter(): AIProviderAdapter {
+  return {
+    name: 'gemini-legacy',
+    async generateResponse(): Promise<GenerateResponse> {
+      throw new Error('Gemini is deprecated for Buddy AI 2.0 Build Week. Configure OpenAI.');
     },
   };
 }
@@ -176,16 +121,12 @@ export function clearLastAiError(): void {
 export function getAIGateway(): AIGateway {
   if (gatewaySingleton) return gatewaySingleton;
 
-  const forceMock = import.meta.env.VITE_USE_AI_MOCK === 'true' || !isFirebaseConfigured;
-  const adapter = forceMock ? createMockAdapter() : createGeminiAdapter();
+  const forceMock = import.meta.env.VITE_USE_AI_MOCK === 'true' || !isOpenAIConfigured();
+  const adapter = forceMock ? createMockAdapter() : createOpenAIAdapter();
   gatewaySingleton = createAIGateway(adapter);
   return gatewaySingleton;
 }
 
-/**
- * Generate with Gemini when configured; on failure, fall back to local coach
- * and record the real error so the UI can show it.
- */
 export async function generateViaGateway(request: GenerateRequest): Promise<GenerateResponse> {
   const gateway = getAIGateway();
   clearLastAiError();
@@ -201,11 +142,10 @@ export async function generateViaGateway(request: GenerateRequest): Promise<Gene
     const message = err instanceof Error ? err.message : 'AI request failed';
     lastAiError = message;
     console.error('[Buddy AI]', message, err);
-    // Keep coaching useful even when Firebase AI Logic is not enabled yet
     const fallback = await createMockAdapter().generateResponse(request);
     return {
       ...fallback,
-      content: `${fallback.content}\n\n---\n_Note: Live Gemini failed (${message}). Enable Firebase AI Logic / Gemini in the console, then retry._`,
+      content: `${fallback.content}\n\n---\n_Note: OpenAI failed (${message}). Set VITE_OPENAI_PROXY_URL or VITE_OPENAI_API_KEY._`,
     };
   }
 }

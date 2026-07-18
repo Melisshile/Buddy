@@ -20,6 +20,7 @@ import { ensureLocalProfile, fullSync, seedDefaults } from '../sync/syncEngine';
 import type { Persona, UserProfile } from '@buddy/shared';
 import { getProfile } from '../sync/localDb';
 import { updatePersona } from '../sync/syncEngine';
+import { ensureTwin } from '../sync/twinDb';
 
 interface AuthState {
   user: User | null;
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const bootstrap = useCallback(async (uid: string, email: string | null, name: string | null) => {
     const p = await ensureLocalProfile(uid, email, name);
     await seedDefaults(uid);
+    await ensureTwin(uid, name);
     await fullSync(uid);
     const fresh = (await getProfile(uid)) ?? p;
     setProfile(fresh);

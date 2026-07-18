@@ -1,7 +1,8 @@
 # Buddy
 node_modules/
 dist/
-lib/
+# Compiled Cloud Functions output only (do not ignore apps/web/src/lib/)
+functions/lib/
 .firebase/
 *.log
 .DS_Store

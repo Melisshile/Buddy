@@ -10,7 +10,12 @@ import {
 import { getAIGateway, getLastAiError } from '../ai/gateway';
 import { SidebarPanel } from './SidebarPanel';
 
-type UiMessage = { id: string; role: 'user' | 'assistant'; content: string };
+type UiMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  steps?: { agent: string; summary: string; model?: string }[];
+};
 
 const PERSONAS: { id: Persona; label: string }[] = [
   { id: 'teacher', label: 'Teacher' },
@@ -18,7 +23,13 @@ const PERSONAS: { id: Persona; label: string }[] = [
   { id: 'coding_partner', label: 'Coding Partner' },
 ];
 
-export function VoiceSession() {
+export function VoiceSession({
+  seedPrompt,
+  onBack,
+}: {
+  seedPrompt?: string;
+  onBack?: () => void;
+}) {
   const { profile, setPersona, logout, demoMode } = useAuth();
   const userId = useUserId();
   const engine = useMemo(() => createVoiceEngine(), []);
@@ -31,8 +42,10 @@ export function VoiceSession() {
   const [error, setError] = useState<string | null>(null);
   const [sidebar, setSidebar] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
+  const [agentChain, setAgentChain] = useState<{ agent: string; summary: string; model?: string }[]>([]);
   const conversationIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const seededRef = useRef(false);
 
   const persona = profile?.persona ?? 'teacher';
   const provider = getAIGateway().getAdapterName();
@@ -66,7 +79,7 @@ export function VoiceSession() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, interim]);
+  }, [messages, interim, agentChain]);
 
   const handleUtterance = useCallback(
     async (transcript: string) => {
@@ -74,6 +87,7 @@ export function VoiceSession() {
       const text = transcript.trim();
       setBusy(true);
       setError(null);
+      setAgentChain([]);
       setMessages((m) => [...m, { id: crypto.randomUUID(), role: 'user', content: text }]);
 
       const intent = engine.classifyIntent(text);
@@ -83,25 +97,34 @@ export function VoiceSession() {
         const conversationId = conversationIdRef.current ?? (await ensureConversation(userId, persona));
         conversationIdRef.current = conversationId;
         const history = engine.conversation.getHistory(12).slice(0, -1);
-        const reply = await generateBuddyReply({
+        const result = await generateBuddyReply({
           userId,
           conversationId,
           transcript: text,
           intent,
           persona,
           history,
+          displayName: profile?.displayName,
         });
-        engine.conversation.addAssistant(reply);
-        setMessages((m) => [...m, { id: crypto.randomUUID(), role: 'assistant', content: reply }]);
+        engine.conversation.addAssistant(result.content);
+        if (result.agentSteps?.length) setAgentChain(result.agentSteps);
+        setMessages((m) => [
+          ...m,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: result.content,
+            steps: result.agentSteps,
+          },
+        ]);
 
         const aiErr = getLastAiError();
         if (aiErr) setError(aiErr);
 
-        // Do not block the UI on TTS — speech can hang in some browsers
         if (engine.synthesizer.isSupported) {
           setSpeaking(true);
           void engine.synthesizer
-            .speak(reply.slice(0, 600))
+            .speak(result.content.slice(0, 600))
             .catch(() => {
               /* ignore TTS failures */
             })
@@ -115,15 +138,21 @@ export function VoiceSession() {
           {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: `I could not complete that request (${msg}). Try typing again, or sign in and confirm Firebase AI Logic is enabled.`,
+            content: `I could not complete that request (${msg}). Check OpenAI proxy / API key configuration.`,
           },
         ]);
       } finally {
         setBusy(false);
       }
     },
-    [userId, busy, engine, persona],
+    [userId, busy, engine, persona, profile?.displayName],
   );
+
+  useEffect(() => {
+    if (!seedPrompt || !userId || seededRef.current) return;
+    seededRef.current = true;
+    void handleUtterance(seedPrompt);
+  }, [seedPrompt, userId, handleUtterance]);
 
   const startListening = useCallback(async () => {
     setError(null);
@@ -175,11 +204,20 @@ export function VoiceSession() {
         <div>
           <h1 className="font-display text-2xl text-white leading-none">Buddy</h1>
           <p className="text-xs text-buddy-mist/50 mt-1">
-            {online ? 'Online' : 'Offline'} · AI: {provider}
+            {online ? 'Online' : 'Offline'} · AI: {provider === 'openai' ? 'OpenAI' : provider}
             {demoMode ? ' · Demo' : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-sm px-3 py-1.5 rounded-lg border border-white/10 text-buddy-mist/80 hover:border-buddy-glow/40"
+            >
+              Dashboard
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setSidebar(true)}
@@ -217,11 +255,28 @@ export function VoiceSession() {
       <main className="flex-1 overflow-y-auto px-5 py-6 max-w-2xl w-full mx-auto">
         {messages.length === 0 && (
           <div className="fade-in text-center py-10">
-            <p className="font-display text-3xl text-white mb-3">What should we work on?</p>
+            <p className="font-display text-3xl text-white mb-3">Coordinate, don&apos;t just chat</p>
             <p className="text-buddy-mist/60 text-sm max-w-md mx-auto leading-relaxed">
-              Try: &ldquo;What should I work on today?&rdquo; · &ldquo;Teach me embeddings&rdquo; ·
-              &ldquo;Quiz me on RAG&rdquo; · &ldquo;Remember that I prefer TypeScript&rdquo;
+              Try: &ldquo;Build me a Firebase inventory app.&rdquo; · &ldquo;Continue my AI project.&rdquo; ·
+              &ldquo;Remember that I prefer TypeScript&rdquo;
             </p>
+          </div>
+        )}
+        {(busy || agentChain.length > 0) && (
+          <div className="mb-6 rounded-xl border border-buddy-glow/20 bg-buddy-navy/40 p-4">
+            <p className="text-[10px] uppercase tracking-wider text-buddy-glow mb-2">Agent chain</p>
+            <ol className="space-y-2 text-sm">
+              {(agentChain.length
+                ? agentChain
+                : [{ agent: 'orchestrator', summary: 'Routing specialized agents…' }]
+              ).map((s, i) => (
+                <li key={`${s.agent}-${i}`} className="text-buddy-mist/85">
+                  <span className="text-buddy-glow font-medium">{s.agent}</span>
+                  {s.model ? <span className="text-buddy-mist/35"> · {s.model}</span> : null}
+                  <span className="block text-buddy-mist/55 text-xs mt-0.5">{s.summary}</span>
+                </li>
+              ))}
+            </ol>
           </div>
         )}
         <ul className="space-y-4">
