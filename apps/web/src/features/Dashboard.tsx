@@ -45,7 +45,7 @@ export function Dashboard({ onOpenSession }: { onOpenSession: (seed?: string) =>
         <div>
           <p className="font-display text-3xl text-white tracking-tight">Buddy</p>
           <p className="text-xs text-buddy-mist/50 mt-1">
-            AI Career Operating System
+            Career Intelligence
             {isOpenAIConfigured() ? ' · Powered by OpenAI' : ' · Coach fallback'}
             {demoMode ? ' · Demo' : ''}
           </p>
@@ -70,9 +70,9 @@ export function Dashboard({ onOpenSession }: { onOpenSession: (seed?: string) =>
 
         <div className="grid md:grid-cols-3 gap-4 mb-4">
           <div className="rounded-2xl border border-white/10 bg-buddy-navy/50 p-5">
-            <p className="text-xs uppercase tracking-wider text-buddy-mist/50 mb-2">Career roadmap</p>
+            <p className="text-xs uppercase tracking-wider text-buddy-mist/50 mb-2">Growth Progress</p>
             <p className="font-display text-4xl text-white mb-2">{twin.careerRoadmapProgress}%</p>
-            <p className="text-sm text-buddy-mist/55 mb-3">through your AI Engineering path</p>
+            <p className="text-sm text-buddy-mist/55 mb-3">AI Engineering roadmap</p>
             <div className="h-2 rounded-full bg-buddy-slate overflow-hidden">
               <div
                 className="h-full bg-buddy-glow"
@@ -121,7 +121,7 @@ export function Dashboard({ onOpenSession }: { onOpenSession: (seed?: string) =>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-buddy-slate/40 p-5">
-            <p className="text-xs uppercase tracking-wider text-buddy-glow mb-3">Career Digital Twin</p>
+            <p className="text-xs uppercase tracking-wider text-buddy-glow mb-3">Career Memory</p>
             <p className="text-sm mb-2">
               <span className="text-buddy-mist/45">Strengths · </span>
               {twin.strengths.join(', ')}

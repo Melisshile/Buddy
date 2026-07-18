@@ -1,79 +1,73 @@
 # Buddy AI 2.0
 
-**The AI Career Operating System** that helps students and professionals learn, build projects, and grow through intelligent voice interaction, persistent memory, and specialized AI agents.
+**The AI Career Operating System** — helps people learn, build, and grow over time.
 
-> OpenAI Build Week entry · Powered by **GPT-5.6**, **Codex**, **Responses API**, Structured Outputs, and tool calling.
-
----
-
-## Demo story (90 seconds)
-
-1. **Dashboard** — “Good morning” + goal *Win OpenAI Build Week* + project progress + Career Digital Twin.
-2. Say / click: **“Build me a Firebase inventory app.”**
-3. Watch the **agent chain**: Career → Project Manager → Coding (Codex) → Research → Reviewer.
-4. Twin updates — new project, tasks, skill progress.
-5. Say: **“Continue my AI project.”** — Buddy resumes without re-asking context.
-
-Hosted: https://buddy-46cbb.web.app
+> OpenAI Build Week · **GPT-5.6** · **Codex** · **Responses API** · Structured Outputs · tool calling  
+> **Live:** https://buddy-46cbb.web.app
 
 ---
 
-## Architecture
+## Architecture at a glance
 
-```
-Voice / Text
-    ↓
-OpenAI (Responses API · GPT-5.6 / Codex)
-    ↓
-Agent Orchestrator
-    ↓
-Career · PM · Coding · Research · Learning · Document · Reviewer
-    ↓
-Shared Memory (Career Digital Twin + IndexedDB)
-    ↓
-Tools (skills, projects, tasks, preferences)
-    ↓
-Firebase (Auth · Firestore · Functions proxy · Hosting)
-    ↓
-UI (Dashboard + Voice Session)
-```
-
-```
-Specialized Agents
-        ↓
-  Shared Memory
-        ↓
-     OpenAI
-        ↓
-    Firebase
+```text
+User
+      │
+      ▼
+Conversation Workspace
+      │
+      ▼
+GPT-5.6
+      │
+      ▼
+Career Intelligence
+      │
+      ▼
+Tool Orchestrator
+      │
+ ┌────┼────┐
+ │    │    │
+ ▼    ▼    ▼
+Career Memory
+Growth Progress
+Project Planner
+      │
+      ▼
+Firebase
 ```
 
 ---
 
-## OpenAI capabilities (Build Week)
+## Why Buddy?
 
-| Capability | How Buddy uses it |
-|------------|-------------------|
-| **GPT-5.6** | Default orchestration & career reasoning |
-| **Codex (`gpt-5.2-codex`)** | Coding Agent implementation plans |
-| **Responses API** | Primary generation path (`/v1/responses`) |
-| **Structured Outputs** | Per-agent summary JSON for the demo UI |
-| **Function / tool calling** | Update Digital Twin (skills, projects, tasks, prefs) |
-| **Streaming** | Roadmapped (next demo polish) |
-| **Vision** | Roadmapped for diagram uploads |
+- **Understands long-term career goals** — not just the last message  
+- **Turns goals into structured learning plans** — week by week, with today’s project  
+- **Tracks growth over time** — Career Memory and Growth Progress, not one-off answers  
 
-Gemini is **not** the default. Offline/demo falls back to a local coach only when OpenAI is unavailable.
+> Buddy doesn’t just answer questions. It continuously helps people learn, build, and grow throughout their careers.
 
 ---
 
-## Features
+## The 90-second story
 
-- **Demo-first Dashboard** — purpose visible before any chat
-- **Multi-agent orchestration** — coordinate, don’t just answer
-- **Career Digital Twin** — skills, projects, goals, strengths, gaps
-- **Voice → Agent → Tool → Result**
-- **Local-first memory** (IndexedDB) + Firebase sync for profile/goals/skills/memories
-- **PWA** installable shell
+1. **Dashboard** — Welcome back · Authentication done yesterday · **42%** Growth Progress  
+2. **“I want to become an AI Engineer.”** — Planning → Career Twin → Roadmap → Saving  
+3. **Learning Plan** + today’s goal (Firebase Inventory App)  
+4. **“Build today's project.”** — architecture, tasks, twin update  
+5. **Dashboard** — updated goal, ~43%, next skill, tasks ✓/○  
+
+Full script: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+
+**Before every live demo:** Developer Menu → **Reset Demo**
+
+---
+
+## Why OpenAI?
+
+OpenAI models provide the reasoning and structured outputs that let Buddy generate personalized roadmaps, coordinate workflows, and keep a consistent career profile over time — central to the product, not a swappable extra.
+
+**Different from ChatGPT:** momentary answers vs continuous career progression.
+
+More Q&A: [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md)
 
 ---
 
@@ -83,83 +77,53 @@ Gemini is **not** the default. Offline/demo falls back to a local coach only whe
 npm install
 npm run build:shared
 cp .env.example apps/web/.env
-```
-
-### Configure OpenAI (required for live demo)
-
-**Option A — Functions proxy (recommended)**
-
-```bash
-# In Google Cloud / Firebase, set OPENAI_API_KEY for functions
-npm --prefix functions install
-npm run build:functions
-firebase deploy --only functions --project buddy-46cbb
-```
-
-Set in `apps/web/.env`:
-
-```env
-VITE_OPENAI_PROXY_URL=https://us-central1-buddy-46cbb.cloudfunctions.net/buddyOpenAI
-VITE_USE_AI_MOCK=false
-```
-
-**Option B — Local key (dev only, never commit)**
-
-```env
-VITE_OPENAI_API_KEY=sk-...
-VITE_USE_AI_MOCK=false
-```
-
-```bash
 npm run dev
 ```
 
-Open http://localhost:5173 → enter demo / sign in → **Dashboard**.
+Open http://localhost:5173 → enter demo → Dashboard.
+
+### OpenAI (live Career Intelligence)
+
+```env
+VITE_USE_AI_MOCK=false
+VITE_OPENAI_PROXY_URL=https://us-central1-buddy-46cbb.cloudfunctions.net/buddyOpenAI
+# or local/dev only:
+# VITE_OPENAI_API_KEY=sk-...
+```
+
+Functions need Firebase **Blaze**. Until then, local key or labeled coach fallback.
 
 ---
 
-## Tech stack
+## Docs for judges
 
-| Layer | Stack |
-|-------|--------|
-| Frontend | React 18 · Vite 6 · TypeScript · Tailwind · PWA |
+| Doc | Purpose |
+|-----|---------|
+| [`docs/OPERATOR_SHEET.md`](docs/OPERATOR_SHEET.md) | One-page live-demo cheat sheet |
+| [`docs/VALIDATION_CHECKLIST.md`](docs/VALIDATION_CHECKLIST.md) | Prove critical paths (10× consecutive) |
+| [`docs/FINAL_SUBMISSION_CHECKLIST.md`](docs/FINAL_SUBMISSION_CHECKLIST.md) | Go/no-go + freeze tag |
+| [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Exact 90s narrative |
+| [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md) | What / why / how |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design |
+| [`docs/BUILD_WEEK_AUDIT.md`](docs/BUILD_WEEK_AUDIT.md) | Claim vs code |
+| [`docs/COMPETITION_READINESS.md`](docs/COMPETITION_READINESS.md) | What to show / hide |
+| [`CHANGELOG.md`](CHANGELOG.md) | History |
+| [`LICENSE`](LICENSE) | MIT |
+
+**Codebase frozen for Build Week** after validation — only critical bugfixes (see submission checklist).
+
+---
+
+## Stack
+
+| Layer | Tech |
+|-------|------|
+| App | React · Vite · TypeScript · Tailwind · PWA |
 | AI | OpenAI Responses API · GPT-5.6 · Codex |
-| Agents | In-app orchestrator + strict tool schemas |
-| Data | IndexedDB (idb) · Firestore |
-| Backend | Firebase Auth · Functions (`buddyOpenAI`) · Hosting |
-| Monorepo | `apps/web` · `packages/shared` · `functions` |
-
----
-
-## Monorepo
-
-```
-apps/web          React PWA (Dashboard, Voice, Agents, Twin)
-packages/shared   Types · AI interfaces · voice · memory
-functions         buddyOpenAI proxy · health · Auth seed
-docs/             CHARTER · TASKS · DevelopmentReport
-```
-
----
-
-## Vision
-
-Buddy is not a chat window. It is a **Career Operating System**:
-
-- Agents that **coordinate** work
-- A **Digital Twin** that remembers who you are becoming
-- Voice that **continues projects**, not just transcripts text
-- OpenAI as the intelligence layer judges expect to see
-
-See `docs/CHARTER.md` and `docs/TASKS.md` for Build Week priorities.
-
----
-
-## Deploy
+| Career Memory | IndexedDB · Firestore (partial) |
+| Backend | Firebase Auth · Hosting · Functions |
 
 ```bash
 npm run build
-firebase deploy --only hosting,functions --project buddy-46cbb
+firebase deploy --only hosting --project buddy-46cbb
 ```
-
-Set `OPENAI_API_KEY` on Cloud Functions before demo day.

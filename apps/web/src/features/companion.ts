@@ -100,7 +100,19 @@ export async function generateBuddyReply(opts: {
   persona: Persona;
   history?: { role: 'user' | 'assistant'; content: string }[];
   displayName?: string | null;
-}): Promise<{ content: string; agentSteps?: { agent: string; summary: string; model?: string }[] }> {
+}): Promise<{
+  content: string;
+  agentSteps?: { agent: string; summary: string; model?: string }[];
+  metrics?: {
+    responseMs: number;
+    toolsExecuted: number;
+    twinUpdated: boolean;
+    memoryUpdated: boolean;
+    agents: string[];
+    model: string;
+    provider: string;
+  };
+}> {
   const { userId, conversationId, transcript, intent, persona } = opts;
 
   if (intent === 'remember') {
@@ -119,6 +131,7 @@ export async function generateBuddyReply(opts: {
   }
 
   let content = orchestrated.reply;
+  let memoryUpdated = intent === 'remember';
 
   // Lightweight intent overlays when orchestra returned a thin coach reply
   if (intent === 'summarize_week' && orchestrated.provider === 'coach') {
@@ -172,9 +185,22 @@ export async function generateBuddyReply(opts: {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+    memoryUpdated = true;
   }
 
-  return { content, agentSteps: orchestrated.steps };
+  return {
+    content,
+    agentSteps: orchestrated.steps,
+    metrics: {
+      responseMs: orchestrated.metrics?.responseMs ?? 0,
+      toolsExecuted: orchestrated.metrics?.toolsExecuted ?? 0,
+      twinUpdated: Boolean(orchestrated.metrics?.twinUpdated || orchestrated.twinPatch),
+      memoryUpdated,
+      agents: orchestrated.metrics?.agents ?? orchestrated.steps.map((s) => s.agent),
+      model: orchestrated.model,
+      provider: orchestrated.provider,
+    },
+  };
 }
 
 export async function ensureConversation(userId: string, persona: Persona) {

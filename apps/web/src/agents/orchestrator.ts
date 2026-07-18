@@ -89,6 +89,8 @@ export async function runAgentOrchestra(opts: {
   twin: DigitalTwin;
   history?: { role: 'user' | 'assistant'; content: string }[];
 }): Promise<OrchestrationResult> {
+  const started = performance.now();
+  let toolsExecuted = 0;
   const chain = pickChain(opts.utterance);
   const steps: AgentStep[] = chain
     .filter((a) => a !== 'orchestrator')
@@ -125,6 +127,7 @@ export async function runAgentOrchestra(opts: {
   if (result.toolCalls?.length) {
     for (const call of result.toolCalls) {
       twin = applyToolToTwin(twin, call.name, call.arguments);
+      toolsExecuted += 1;
     }
   }
 
@@ -326,16 +329,31 @@ export async function runAgentOrchestra(opts: {
     }
   }
 
+  const finalSteps = parsedSummaries?.length
+    ? parsedSummaries
+    : steps.map((s, i) => ({
+        ...s,
+        summary: `${AGENT_LABELS[s.agent]} · step ${i + 1}/${steps.length}`,
+      }));
+
+  const twinUpdated =
+    twin.updatedAt !== opts.twin.updatedAt ||
+    twin.careerRoadmapProgress !== opts.twin.careerRoadmapProgress ||
+    twin.projects[0]?.name !== opts.twin.projects[0]?.name ||
+    twin.currentTasks.length !== opts.twin.currentTasks.length;
+
   return {
     reply,
-    steps: parsedSummaries?.length
-      ? parsedSummaries
-      : steps.map((s, i) => ({
-          ...s,
-          summary: `${AGENT_LABELS[s.agent]} · step ${i + 1}/${steps.length}`,
-        })),
+    steps: finalSteps,
     twinPatch: twin,
     provider: result.provider,
     model: result.model,
+    metrics: {
+      responseMs: Math.round(performance.now() - started),
+      toolsExecuted,
+      twinUpdated,
+      memoryUpdated: false,
+      agents: finalSteps.map((s) => s.agent),
+    },
   };
 }

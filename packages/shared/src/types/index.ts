@@ -146,4 +146,12 @@ export interface OrchestrationResult {
   twinPatch?: Partial<DigitalTwin>;
   provider: string;
   model: string;
+  /** Demo / Developer Mode observability */
+  metrics?: {
+    responseMs: number;
+    toolsExecuted: number;
+    twinUpdated: boolean;
+    memoryUpdated: boolean;
+    agents: string[];
+  };
 }

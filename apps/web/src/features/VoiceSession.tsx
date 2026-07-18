@@ -9,6 +9,7 @@ import {
 } from './companion';
 import { getAIGateway, getLastAiError } from '../ai/gateway';
 import { SidebarPanel } from './SidebarPanel';
+import type { DevMetrics } from './DeveloperModePanel';
 
 type UiMessage = {
   id: string;
@@ -26,9 +27,11 @@ const PERSONAS: { id: Persona; label: string }[] = [
 export function VoiceSession({
   seedPrompt,
   onBack,
+  onMetrics,
 }: {
   seedPrompt?: string;
   onBack?: () => void;
+  onMetrics?: (metrics: DevMetrics) => void;
 }) {
   const { profile, setPersona, logout, demoMode } = useAuth();
   const userId = useUserId();
@@ -122,6 +125,9 @@ export function VoiceSession({
         });
         engine.conversation.addAssistant(result.content);
         if (result.agentSteps?.length) setAgentChain(result.agentSteps);
+        if (result.metrics) {
+          onMetrics?.(result.metrics);
+        }
         setActivity((a) => (a.length ? [...a, 'Done'] : a));
         setMessages((m) => [
           ...m,
@@ -160,7 +166,7 @@ export function VoiceSession({
         setBusy(false);
       }
     },
-    [userId, busy, engine, persona, profile?.displayName, runActivityBeats],
+    [userId, busy, engine, persona, profile?.displayName, runActivityBeats, onMetrics],
   );
 
   useEffect(() => {
@@ -219,7 +225,8 @@ export function VoiceSession({
         <div>
           <h1 className="font-display text-2xl text-white leading-none">Buddy</h1>
           <p className="text-xs text-buddy-mist/50 mt-1">
-            {online ? 'Online' : 'Offline'} · AI: {provider === 'openai' ? 'OpenAI' : provider}
+            Conversation Workspace · {online ? 'Online' : 'Offline'} ·{' '}
+            {provider === 'openai' ? 'OpenAI' : provider}
             {demoMode ? ' · Demo' : ''}
           </p>
         </div>

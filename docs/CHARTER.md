@@ -1,16 +1,21 @@
 # Buddy AI 2.0 — Build Week Charter
 
-**Objective:** Maximize OpenAI Build Week judging score.
+**Objective:** Maximize OpenAI Build Week judging score **without sacrificing trust**.
 
 **Product:** Buddy is the **AI Career Operating System** — not a ChatGPT clone.
 
-Every implementation must:
-1. Showcase **OpenAI** capabilities (GPT-5.6, Codex, Responses API, Structured Outputs, tool calling, streaming).
-2. Create **memorable demo moments** (multi-agent coordination, digital twin insight, voice → agent → tool → result).
-3. Demonstrate **production-quality** engineering (modular, secure key handling, clean UX).
+**Vision status: FROZEN.** Do not add features unless they fix a demo-breaking bug (`docs/DEMO_SCRIPT.md`).
 
-If a task does not materially improve Innovation / AI usage / Demo / Product scores, **postpone it**.
+**Quality over feature count.** From this point onward:
 
-**Do not prioritize:** exhaustive CI, remaining Gemini paths, wake-word stubs, Storage uploads, or polish that doesn’t show in the first 30 seconds.
+- Clean architecture, type-safe TypeScript, modular boundaries
+- Proper error handling and secure API boundaries (no secrets in the client for production)
+- Firebase security rules respected
+- Observable demo (Developer Mode metrics)
+- Clear documentation
 
-Maintain: `docs/DevelopmentReport.md`, `docs/TASKS.md`, `CHANGELOG.md`.
+Before marking anything complete: works end-to-end, no known critical bugs, safe to demo live, documented. If it cannot reach that bar in time, **postpone** it.
+
+**Layers:** Layer 1 production core + Layer 2 demo polish only. Layer 3 (vision, wake word, full RAG, Document Agent, streaming) stays roadmap.
+
+Maintain: `docs/FINAL_SUBMISSION_CHECKLIST.md`, `docs/JUDGE_QA.md`, `docs/DEMO_SCRIPT.md`, `CHANGELOG.md`.

@@ -74,6 +74,14 @@ export function getLocalDb() {
   return dbPromise;
 }
 
+/** Close DB connection so IndexedDB can be deleted (Demo Reset). */
+export async function closeLocalDb(): Promise<void> {
+  if (!dbPromise) return;
+  const db = await dbPromise;
+  db.close();
+  dbPromise = null;
+}
+
 export async function putProfile(profile: UserProfile) {
   const db = await getLocalDb();
   await db.put('profile', profile);

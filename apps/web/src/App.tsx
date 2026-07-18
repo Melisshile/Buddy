@@ -3,12 +3,14 @@ import { AuthProvider, useAuth } from './auth/AuthProvider';
 import { LoginScreen } from './features/LoginScreen';
 import { VoiceSession } from './features/VoiceSession';
 import { Dashboard } from './features/Dashboard';
+import { DeveloperModePanel, type DevMetrics } from './features/DeveloperModePanel';
 import { initAnalytics, initAppCheck, isFirebaseConfigured } from './lib/firebase';
 
 function Boot() {
   const { profile, loading, demoMode, user } = useAuth();
   const [view, setView] = useState<'dashboard' | 'session'>('dashboard');
   const [seedPrompt, setSeedPrompt] = useState<string | undefined>();
+  const [devMetrics, setDevMetrics] = useState<DevMetrics | null>(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -32,25 +34,27 @@ function Boot() {
     return <LoginScreen />;
   }
 
-  if (view === 'session') {
-    return (
-      <VoiceSession
-        seedPrompt={seedPrompt}
-        onBack={() => {
-          setSeedPrompt(undefined);
-          setView('dashboard');
-        }}
-      />
-    );
-  }
-
   return (
-    <Dashboard
-      onOpenSession={(seed) => {
-        setSeedPrompt(seed);
-        setView('session');
-      }}
-    />
+    <>
+      {view === 'session' ? (
+        <VoiceSession
+          seedPrompt={seedPrompt}
+          onMetrics={setDevMetrics}
+          onBack={() => {
+            setSeedPrompt(undefined);
+            setView('dashboard');
+          }}
+        />
+      ) : (
+        <Dashboard
+          onOpenSession={(seed) => {
+            setSeedPrompt(seed);
+            setView('session');
+          }}
+        />
+      )}
+      <DeveloperModePanel metrics={devMetrics} />
+    </>
   );
 }
 

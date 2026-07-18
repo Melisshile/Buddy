@@ -4,6 +4,11 @@
 **Purpose:** Decide what is safe to show live, what to close in hours, and what to leave out of the pitch.  
 **Rule:** Do not present Stub or unfinished Partial features as complete. Prefer a short, true demo over a long, brittle one.
 
+## Vision freeze
+
+**No new features** unless they directly fix `docs/DEMO_SCRIPT.md`.  
+From here: demo reliability (20+ rehearsals), repo polish, language, judge Q&A (`docs/JUDGE_QA.md`), optional 90s video.
+
 ---
 
 ## Executive verdict
@@ -16,7 +21,7 @@
 
 **Honesty line for judges (recommended):**
 
-> Buddy includes a working Career Digital Twin dashboard, voice/text session, and an agent orchestrator that can call tools to update your twin. We demo Career + Project Manager + Coding (Codex) + Reviewer. Document Agent and vision are next-milestone, not in this demo.
+> Buddy includes Career Intelligence on the dashboard, a Conversation Workspace, and an orchestrator that updates Career Memory. We demo the path from “become an AI Engineer” to today’s project and Growth Progress. Document Agent and vision are next-milestone, not in this demo.
 
 ---
 
