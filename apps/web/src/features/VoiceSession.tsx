@@ -43,12 +43,25 @@ export function VoiceSession({
   const [sidebar, setSidebar] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [agentChain, setAgentChain] = useState<{ agent: string; summary: string; model?: string }[]>([]);
+  const [activity, setActivity] = useState<string[]>([]);
   const conversationIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const seededRef = useRef(false);
 
   const persona = profile?.persona ?? 'teacher';
   const provider = getAIGateway().getAdapterName();
+
+  const runActivityBeats = useCallback(async (transcript: string) => {
+    const career = /become an? ai engineer|want to be(come)? an? ai engineer/i.test(transcript);
+    const beats = career
+      ? ['Planning…', 'Updating Career Twin…', 'Creating Roadmap…', 'Saving Progress…']
+      : ['Planning…', 'Coordinating agents…', 'Updating Career Twin…', 'Saving Progress…'];
+    setActivity([]);
+    for (const beat of beats) {
+      setActivity((prev) => [...prev, beat]);
+      await new Promise((r) => setTimeout(r, 380));
+    }
+  }, []);
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -79,7 +92,7 @@ export function VoiceSession({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, interim, agentChain]);
+  }, [messages, interim, agentChain, activity]);
 
   const handleUtterance = useCallback(
     async (transcript: string) => {
@@ -92,6 +105,7 @@ export function VoiceSession({
 
       const intent = engine.classifyIntent(text);
       engine.conversation.addUser(text);
+      void runActivityBeats(text);
 
       try {
         const conversationId = conversationIdRef.current ?? (await ensureConversation(userId, persona));
@@ -108,6 +122,7 @@ export function VoiceSession({
         });
         engine.conversation.addAssistant(result.content);
         if (result.agentSteps?.length) setAgentChain(result.agentSteps);
+        setActivity((a) => (a.length ? [...a, 'Done'] : a));
         setMessages((m) => [
           ...m,
           {
@@ -145,7 +160,7 @@ export function VoiceSession({
         setBusy(false);
       }
     },
-    [userId, busy, engine, persona, profile?.displayName],
+    [userId, busy, engine, persona, profile?.displayName, runActivityBeats],
   );
 
   useEffect(() => {
@@ -253,30 +268,48 @@ export function VoiceSession({
       </div>
 
       <main className="flex-1 overflow-y-auto px-5 py-6 max-w-2xl w-full mx-auto">
-        {messages.length === 0 && (
-          <div className="fade-in text-center py-10">
-            <p className="font-display text-3xl text-white mb-3">Coordinate, don&apos;t just chat</p>
-            <p className="text-buddy-mist/60 text-sm max-w-md mx-auto leading-relaxed">
-              Try: &ldquo;Build me a Firebase inventory app.&rdquo; · &ldquo;Continue my AI project.&rdquo; ·
-              &ldquo;Remember that I prefer TypeScript&rdquo;
-            </p>
+        {(busy || activity.length > 0 || agentChain.length > 0) && (
+          <div className="mb-6 rounded-xl border border-buddy-glow/20 bg-buddy-navy/40 p-4">
+            {activity.length > 0 && (
+              <>
+                <p className="text-[10px] uppercase tracking-wider text-buddy-glow mb-2">Working</p>
+                <ul className="space-y-1.5 text-sm mb-4">
+                  {activity.map((beat, i) => (
+                    <li
+                      key={`${beat}-${i}`}
+                      className={
+                        beat === 'Done' ? 'text-buddy-glow' : 'text-buddy-mist/80 animate-pulse'
+                      }
+                    >
+                      {beat}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {agentChain.length > 0 && (
+              <>
+                <p className="text-[10px] uppercase tracking-wider text-buddy-glow mb-2">Agents</p>
+                <ol className="space-y-2 text-sm">
+                  {agentChain.map((s, i) => (
+                    <li key={`${s.agent}-${i}`} className="text-buddy-mist/85">
+                      <span className="text-buddy-glow font-medium">{s.agent}</span>
+                      {s.model ? <span className="text-buddy-mist/35"> · {s.model}</span> : null}
+                      <span className="block text-buddy-mist/55 text-xs mt-0.5">{s.summary}</span>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
           </div>
         )}
-        {(busy || agentChain.length > 0) && (
-          <div className="mb-6 rounded-xl border border-buddy-glow/20 bg-buddy-navy/40 p-4">
-            <p className="text-[10px] uppercase tracking-wider text-buddy-glow mb-2">Agent chain</p>
-            <ol className="space-y-2 text-sm">
-              {(agentChain.length
-                ? agentChain
-                : [{ agent: 'orchestrator', summary: 'Routing specialized agents…' }]
-              ).map((s, i) => (
-                <li key={`${s.agent}-${i}`} className="text-buddy-mist/85">
-                  <span className="text-buddy-glow font-medium">{s.agent}</span>
-                  {s.model ? <span className="text-buddy-mist/35"> · {s.model}</span> : null}
-                  <span className="block text-buddy-mist/55 text-xs mt-0.5">{s.summary}</span>
-                </li>
-              ))}
-            </ol>
+        {messages.length === 0 && !busy && (
+          <div className="fade-in text-center py-10">
+            <p className="font-display text-3xl text-white mb-3">Your career path starts here</p>
+            <p className="text-buddy-mist/60 text-sm max-w-md mx-auto leading-relaxed">
+              Try: &ldquo;I want to become an AI Engineer.&rdquo; then &ldquo;Build today&apos;s
+              project.&rdquo;
+            </p>
           </div>
         )}
         <ul className="space-y-4">

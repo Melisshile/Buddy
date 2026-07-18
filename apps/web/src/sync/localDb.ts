@@ -53,25 +53,21 @@ let dbPromise: Promise<IDBPDatabase<BuddyDB>> | null = null;
 
 export function getLocalDb() {
   if (!dbPromise) {
-    dbPromise = openDB<BuddyDB>('buddy-v1', 2, {
-      upgrade(db, oldVersion) {
-        if (oldVersion < 1) {
-          db.createObjectStore('profile', { keyPath: 'uid' });
-          const goals = db.createObjectStore('goals', { keyPath: 'id' });
-          goals.createIndex('by-user', 'userId');
-          const skills = db.createObjectStore('skills', { keyPath: 'id' });
-          skills.createIndex('by-user', 'userId');
-          const memories = db.createObjectStore('memories', { keyPath: 'id' });
-          memories.createIndex('by-user', 'userId');
-          const conversations = db.createObjectStore('conversations', { keyPath: 'id' });
-          conversations.createIndex('by-user', 'userId');
-          const messages = db.createObjectStore('messages', { keyPath: 'id' });
-          messages.createIndex('by-conversation', 'conversationId');
-          db.createObjectStore('meta', { keyPath: 'key' });
-        }
-        if (oldVersion < 2 && !db.objectStoreNames.contains('twin')) {
-          db.createObjectStore('twin', { keyPath: 'userId' });
-        }
+    dbPromise = openDB<BuddyDB>('buddy-v2', 1, {
+      upgrade(db) {
+        db.createObjectStore('profile', { keyPath: 'uid' });
+        db.createObjectStore('twin', { keyPath: 'userId' });
+        const goals = db.createObjectStore('goals', { keyPath: 'id' });
+        goals.createIndex('by-user', 'userId');
+        const skills = db.createObjectStore('skills', { keyPath: 'id' });
+        skills.createIndex('by-user', 'userId');
+        const memories = db.createObjectStore('memories', { keyPath: 'id' });
+        memories.createIndex('by-user', 'userId');
+        const conversations = db.createObjectStore('conversations', { keyPath: 'id' });
+        conversations.createIndex('by-user', 'userId');
+        const messages = db.createObjectStore('messages', { keyPath: 'id' });
+        messages.createIndex('by-conversation', 'conversationId');
+        db.createObjectStore('meta', { keyPath: 'key' });
       },
     });
   }

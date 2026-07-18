@@ -15,27 +15,51 @@ function lastUserText(request: GenerateRequest): string {
 
 function buildCoachingReply(q: string): string {
   const lower = q.toLowerCase();
+  if (/become an? ai engineer|want to be(come)? an? ai engineer/.test(lower)) {
+    return [
+      '## Learning Plan',
+      '',
+      '| Week | Focus |',
+      '|------|--------|',
+      '| Week 1 | Firebase |',
+      '| Week 2 | OpenAI APIs |',
+      '| Week 3 | AI Agents |',
+      '| Week 4 | Deployment |',
+      '',
+      "### Today's Goal",
+      '**Build a Firebase Inventory App**',
+      '',
+      'You’re on the AI Engineer path. Yesterday you completed Authentication. Say **“Build today\'s project.”** to turn today’s goal into architecture and tasks.',
+    ].join('\n');
+  }
+  if (/build today'?s project|today'?s project/.test(lower)) {
+    return [
+      '## Today’s project: Firebase Inventory App',
+      '',
+      '**Architecture** — React + TypeScript, Firebase Auth, Firestore inventory, Hosting.',
+      '',
+      '**Milestones** — data model → CRUD UI → security rules.',
+      '',
+      '**Timeline** — one focused session today.',
+      '',
+      'Career Twin updated. Return to the Dashboard to see progress and tasks.',
+    ].join('\n');
+  }
   if (/build|inventory|firebase app|create (an? )?app/.test(lower)) {
     return [
-      '## Agent plan (offline coach)',
+      '## Build plan',
       '',
-      '1. **Career Agent** — Aligns this build with your AI Engineer goal',
-      '2. **Project Manager** — Breaks work into Firebase Auth → Firestore inventory → Hosting',
-      '3. **Coding Agent** — TypeScript + Firebase modular SDK scaffold',
-      '4. **Research Agent** — Security rules + App Check checklist',
-      '5. **Reviewer** — Demo readiness for OpenAI Build Week',
+      'Aligned to your AI Engineer goal: Firebase Inventory App with Auth, Firestore, and a demo screen.',
       '',
-      '_Live OpenAI is offline or not configured — configure `OPENAI_API_KEY` / proxy to run GPT-5.6 + Codex._',
+      'Prefer the career path: say **“I want to become an AI Engineer.”** then **“Build today\'s project.”**',
     ].join('\n');
   }
   if (/what should i|today|work on|plan my/.test(lower)) {
     return [
-      'Focused plan for today:',
-      '1. Continue your active project (25 min)',
-      '2. One Learning Agent lesson on agents/tool calling (20 min)',
-      '3. Update your Career Twin strengths/gaps (10 min)',
+      'Based on your twin: you’re 42% through the AI Engineering roadmap.',
+      'Next: set the career goal, then build today’s project.',
       '',
-      'Say **“Continue my AI project”** or **“Build me a Firebase inventory app.”**',
+      'Say **“I want to become an AI Engineer.”**',
     ].join('\n');
   }
   if (/remember/.test(lower)) {
@@ -44,8 +68,8 @@ function buildCoachingReply(q: string): string {
   return [
     `I hear you: “${q}”`,
     '',
-    'I am Buddy — your AI Career Operating System. I coordinate specialized agents powered by OpenAI.',
-    'Try: “Build me a Firebase inventory app.” or “Continue my AI project.”',
+    'I am Buddy — your AI Career Operating System.',
+    'Try: **“I want to become an AI Engineer.”** then **“Build today\'s project.”**',
   ].join('\n');
 }
 
