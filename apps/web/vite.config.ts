@@ -4,6 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
 
 export default defineConfig({
+  // Monorepo: load VITE_* from repo root .env (OpenAI, Firebase, etc.)
+  envDir: path.resolve(__dirname, '../..'),
   plugins: [
     react(),
     VitePWA({
